@@ -67,7 +67,7 @@ Parameters:
   ExistingVpcId:
     Type: String
     Default: ''
-    Description: "Optional: insert ID of an existing VPC if you don't want to crate a new VPC (note that you also need to populate ExistingVpcCidrBlock, ExistingVpcSecurityGroupId, ExistingPublicSubnet1Id, ExistingPublicSubnet2Id and ExistingPrivateSubnets)"
+    Description: "Optional: insert ID of an existing VPC if you don't want to crate a new VPC (note that you also need to populate ExistingVpcCidrBlock, ExistingVpcSecurityGroupId, ExistingPublicSubnets, and ExistingPrivateSubnets)"
   ExistingVpcCidrBlock:
     Type: String
     Default: ''
@@ -76,14 +76,10 @@ Parameters:
     Type: String
     Default: ''
     Description: 'Optional: ID of an existing security group, populate this only if you also populated ExistingVpcId'
-  ExistingPublicSubnet1Id:
-    Type: String
+  ExistingPublicSubnets:
+    Type: CommaDelimitedList
     Default: ''
-    Description: 'Optional: ID of the 1st existing public subnet, populate this only if you also populated ExistingVpcId'
-  ExistingPublicSubnet2Id:
-    Type: String
-    Default: ''
-    Description: 'Optional: ID of the 2nd existing public subnet, populate this only if you also populated ExistingVpcId'
+    Description: 'Optional: comma-separated list of IDs of existing public subnets, populate this only if you also populated ExistingVpcId'
   ExistingPrivateSubnets:
     Type: CommaDelimitedList
     Default: ''
@@ -116,8 +112,7 @@ Conditions:
     - !Equals [ !Ref ExistingVpcId, '' ]
     - !Equals [ !Ref ExistingVpcCidrBlock, '' ]
     - !Equals [ !Ref ExistingVpcSecurityGroupId, '' ]
-    - !Equals [ !Ref ExistingPublicSubnet1Id, '' ]
-    - !Equals [ !Ref ExistingPublicSubnet2Id, '' ]
+    - !Equals [ !Join ['', !Ref ExistingPublicSubnets], '' ]
     - !Equals [ !Join ['', !Ref ExistingPrivateSubnets], '' ]
   EnableAuth: !Equals [ !Ref APIBasicAuth, 'true']
   EnableRole: !Equals [ !Ref CustomRole, 'true']
@@ -228,9 +223,10 @@ Resources:
     Properties:
       Scheme: internal
       Type: network
-      Subnets:
-        - !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
-        - !If [ CreateOwnVpc, !Ref Subnet2, !Ref ExistingPublicSubnet2Id ]
+      Subnets: !If
+        - CreateOwnVpc
+        - [ !Ref Subnet1, !Ref Subnet2 ]
+        - !Ref ExistingPublicSubnets
   NLBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
@@ -417,7 +413,7 @@ Resources:
           Subnets: !If
             - CreateOwnVpc
             - [ !Ref Subnet1, !Ref Subnet2 ]
-            - [ !Ref ExistingPublicSubnet1Id, !Ref ExistingPublicSubnet2Id ]
+            - !Ref ExistingPublicSubnets
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
         - ContainerName: !FindInMap ['ServiceInfo', 'ServiceName', 'value']
@@ -502,9 +498,10 @@ Resources:
       VpcConfig: 
         SecurityGroupIds: 
           - !If [ CreateOwnVpc, !GetAtt VPC.DefaultSecurityGroup, !Ref ExistingVpcSecurityGroupId ]
-        SubnetIds: 
-          - !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
-          - !If [ CreateOwnVpc, !Ref Subnet2, !Ref ExistingPublicSubnet2Id ]
+        SubnetIds: !If
+          - CreateOwnVpc
+          - [ !Ref Subnet1, !Ref Subnet2 ]
+          - !Ref ExistingPublicSubnets
   NLBTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -534,9 +531,10 @@ Resources:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: DBSubnetGroup for RDS instances
-      SubnetIds:
-        - !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
-        - !If [ CreateOwnVpc, !Ref Subnet2, !Ref ExistingPublicSubnet2Id ]
+      SubnetIds: !If
+        - CreateOwnVpc
+        - [ !Ref Subnet1, !Ref Subnet2 ]
+        - !Ref ExistingPublicSubnets
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -1004,7 +1002,10 @@ Resources:
       InstanceType: !Ref SagemakerInstance
       RoleArn: !GetAtt 'SageMakerExecutionRole.Arn'
       LifecycleConfigName: !GetAtt 'BasicNotebookInstanceLifecycleConfig.NotebookInstanceLifecycleConfigName'
-      SubnetId: !If [ CreateOwnVpc, !Ref Subnet1, !Ref ExistingPublicSubnet1Id ]
+      SubnetId: !If
+        - CreateOwnVpc
+        - !Ref Subnet1
+        - !Select [ "0", !Ref ExistingPublicSubnets ]
       SecurityGroupIds: 
         - !Ref 'SagemakerSecurityGroup'
   RandomString:
