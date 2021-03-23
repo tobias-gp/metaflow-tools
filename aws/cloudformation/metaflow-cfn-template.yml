@@ -1433,3 +1433,8 @@ Outputs:
   MigrationFunctionName:
     Description: "Name of DB Migration Function"
     Value: !Ref ExecuteDBMigration
+  VPC:
+    Description: "ID of VPC used by this stack"
+    Value: !If [ CreateOwnVpc, !Ref 'VPC', !Ref ExistingVpcId ]
+    Export:
+      Name: !Sub "${AWS::StackName}-VPC"
