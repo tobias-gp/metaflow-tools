@@ -25,7 +25,7 @@ Parameters:
     AllowedValues: [16,32,64,96,128]
     MinValue: 16
     MaxValue: 128
-    Description: "Maximum VCPUs for Batch Compute Environment [16-128]"
+    Description: 'Maximum VCPUs for Batch Compute Environment [16-128]'
   MinVCPUBatch: 
     Type: Number
     Default: 8
