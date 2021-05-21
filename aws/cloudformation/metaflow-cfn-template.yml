@@ -22,10 +22,10 @@ Parameters:
   MaxVCPUBatch: 
     Type: Number
     Default: 64
-    AllowedValues: [16,32,64,96]
+    AllowedValues: [16,32,64,96,128]
     MinValue: 16
-    MaxValue: 96
-    Description: 'Maximum VCPUs for Batch Compute Environment [16-96]'
+    MaxValue: 128
+    Description: "Maximum VCPUs for Batch Compute Environment [16-128]"
   MinVCPUBatch: 
     Type: Number
     Default: 8
@@ -37,9 +37,9 @@ Parameters:
     Type: Number
     Default: 8
     MinValue: 0
-    MaxValue: 16
-    AllowedValues: [0,2,4,8,16]
-    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-16] for EC2 Batch Compute Environment (ignored for Fargate)'
+    MaxValue: 64
+    AllowedValues: [0,2,4,8,16,32,64]
+    Description: 'Desired Starting VCPUs for Batch Compute Environment [0-64] for EC2 Batch Compute Environment (ignored for Fargate)'
   ComputeEnvInstanceTypes: 
     Type: CommaDelimitedList
     Default: "c4.large,c4.xlarge,c4.2xlarge,c4.4xlarge,c4.8xlarge"
@@ -89,6 +89,10 @@ Parameters:
     Type: CommaDelimitedList
     Default: ''
     Description: 'Optional: comma-separated list of IDs of existing private subnets, populate this only if you also populated ExistingVpcId'
+  ExtraManagedPolicies:
+    Type: CommaDelimitedList
+    Description: "Managed policies to append to the BatchExecutionRole role. E.g., ARN of managed policy for accessing an SSM parameter."
+    Default: ""
 
 Mappings:
   ServiceInfo:
@@ -124,6 +128,11 @@ Conditions:
   EnableFargateOnBatch: !Equals [ !Ref BatchType, 'fargate']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
+  HasExtraManagedPolicies: !Not
+    - !Equals
+      - !Join [ "", !Ref ExtraManagedPolicies ]
+      - ""
+  
 Resources:
   VPC:
     Condition: CreateOwnVpc
@@ -1038,6 +1047,10 @@ Resources:
           Action:
             - sts:AssumeRole
       Path: /
+      ManagedPolicyArns: !If
+        - HasExtraManagedPolicies
+        - !Ref ExtraManagedPolicies
+        - !Ref AWS::NoValue
       Policies:
         - PolicyName: CustomS3ListBatch
           PolicyDocument:
