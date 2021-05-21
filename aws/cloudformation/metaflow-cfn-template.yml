@@ -89,9 +89,9 @@ Parameters:
     Type: CommaDelimitedList
     Default: ''
     Description: 'Optional: comma-separated list of IDs of existing private subnets, populate this only if you also populated ExistingVpcId'
-  ExtraManagedPolicies:
+  BatchTaskRoleExtraManagedPolicies:
     Type: CommaDelimitedList
-    Description: "Managed policies to append to the BatchExecutionRole role. E.g., ARN of managed policy for accessing an SSM parameter."
+    Description: "Managed policies to append to the BatchS3TaskRole role. E.g., ARN of managed policy for accessing an SSM parameter."
     Default: ""
 
 Mappings:
@@ -128,9 +128,9 @@ Conditions:
   EnableFargateOnBatch: !Equals [ !Ref BatchType, 'fargate']
   EnableSagemaker: !Equals [ !Ref EnableSagemaker, 'true']
   IsGov: !Equals [ !Ref IAMPartition, 'aws-us-gov']
-  HasExtraManagedPolicies: !Not
+  BatchTaskRoleHasExtraManagedPolicies: !Not
     - !Equals
-      - !Join [ "", !Ref ExtraManagedPolicies ]
+      - !Join [ "", !Ref BatchTaskRoleExtraManagedPolicies ]
       - ""
   
 Resources:
@@ -1048,8 +1048,8 @@ Resources:
             - sts:AssumeRole
       Path: /
       ManagedPolicyArns: !If
-        - HasExtraManagedPolicies
-        - !Ref ExtraManagedPolicies
+        - BatchTaskRoleHasExtraManagedPolicies
+        - !Ref BatchTaskRoleExtraManagedPolicies
         - !Ref AWS::NoValue
       Policies:
         - PolicyName: CustomS3ListBatch
