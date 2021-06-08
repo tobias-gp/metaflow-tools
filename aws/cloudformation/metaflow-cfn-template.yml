@@ -7,6 +7,12 @@ Parameters:
     Default: ml.t2.xlarge
     AllowedValues: ['ml.t2.large','ml.t2.xlarge','ml.t2.2xlarge']
     Description: 'Instance type for Sagemaker Notebook.'
+  SagemakerInstanceVolumeSize:
+    Type: Number
+    Default: 5
+    MinValue: 5
+    MaxValue: 16384
+    Description: 'Volume size of Sagemaker Notebook instance.'
   VPCCidr: 
     Type: String
     Default: 10.20.0.0/16
@@ -1024,6 +1030,7 @@ Resources:
         - !Select [ "0", !Ref ExistingPublicSubnets ]
       SecurityGroupIds: 
         - !Ref 'SagemakerSecurityGroup'
+      VolumeSizeInGB: !Ref SagemakerInstanceVolumeSize
   RandomString:
     Type: AWS::SecretsManager::Secret
     Properties:
